@@ -31,6 +31,11 @@ struct Assignee {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+struct Milestone {
+    title: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 struct Issue {
     title: String,
     html_url: String,
@@ -38,6 +43,7 @@ struct Issue {
     repository_url: String,
     pull_request: Option<PullRequest>,
     assignee: Option<Assignee>,
+    milestone: Option<Milestone>,
 }
 
 #[derive(Debug, Serialize)]
@@ -45,6 +51,7 @@ struct IssueCSV<'a> {
     id: String,
     title: String,
     assignee: Option<&'a str>,
+    milestone: Option<&'a str>,
 }
 
 impl Issue {
@@ -75,6 +82,12 @@ impl Issue {
             assignee: {
                 match self.assignee {
                     Some(ref a) => Some(&a.login),
+                    None => None,
+                }
+            },
+            milestone: {
+                match self.milestone {
+                    Some(ref m) => Some(&m.title),
                     None => None,
                 }
             },
