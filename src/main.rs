@@ -26,18 +26,25 @@ struct PullRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+struct Assignee {
+    login: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 struct Issue {
     title: String,
     html_url: String,
     number: u32,
     repository_url: String,
     pull_request: Option<PullRequest>,
+    assignee: Option<Assignee>,
 }
 
 #[derive(Debug, Serialize)]
-struct IssueCSV {
+struct IssueCSV<'a> {
     id: String,
     title: String,
+    assignee: Option<&'a str>,
 }
 
 impl Issue {
@@ -65,6 +72,12 @@ impl Issue {
                 self.number
             ),
             title: format!("=HYPERLINK(\"{}\", \"{}\")", self.html_url, self.title),
+            assignee: {
+                match self.assignee {
+                    Some(ref a) => Some(&a.login),
+                    None => None,
+                }
+            },
         }
     }
 }
