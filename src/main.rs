@@ -13,6 +13,10 @@ use url::Url;
 extern crate structopt;
 use structopt::StructOpt;
 
+extern crate csv;
+
+use std::path::PathBuf;
+
 #[derive(Debug, Serialize, Deserialize)]
 struct PullRequest {
     url: String,
@@ -30,6 +34,12 @@ struct Issue {
     pull_request: Option<PullRequest>,
 }
 
+#[derive(Debug, Serialize)]
+struct IssueCSV {
+    id: String,
+    title: String,
+}
+
 impl Issue {
     fn is_pull_request(&self) -> bool {
         self.pull_request.is_some()
@@ -44,6 +54,18 @@ impl Issue {
             .last()
             .expect("missing path segment")
             .to_string()
+    }
+
+    fn csv(&self) -> IssueCSV {
+        IssueCSV {
+            id: format!(
+                "=HYPERLINK(\"{}\", \"{} / #{}\")",
+                self.html_url,
+                self.get_component(),
+                self.number
+            ),
+            title: format!("=HYPERLINK(\"{}\", \"{}\")", self.html_url, self.title),
+        }
     }
 }
 
@@ -77,6 +99,9 @@ fn get_issues(client: &Github, owner: &str, repo_name: &str) -> Option<Issues> {
 struct Opt {
     #[structopt(help = "github auth token")] token: String,
     #[structopt(help = "owner of github components")] owner: String,
+    #[structopt(help = "output file", short = "o", long = "output", default_value = "issues.csv",
+                parse(from_os_str))]
+    output: PathBuf,
     #[structopt(help = "github components to look for issues")] components: Vec<String>,
 }
 
@@ -84,6 +109,7 @@ fn main() {
     let opt = Opt::from_args();
 
     let client = Github::new(opt.token).unwrap();
+    let mut wtr = csv::Writer::from_path(&opt.output).expect("Failed to create output file");
 
     for component in opt.components {
         let issues = get_issues(&client, &opt.owner, &component).expect("failed to get issues");
@@ -92,6 +118,9 @@ fn main() {
 
         for issue in issues {
             println!("{:?} {}", issue, issue.get_component());
+            wtr.serialize(issue.csv()).expect("Failed to add record");
         }
     }
+
+    wtr.flush().expect("Failed to flush output");
 }
