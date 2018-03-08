@@ -15,7 +15,11 @@ use structopt::StructOpt;
 
 extern crate csv;
 
+extern crate itertools;
+use itertools::Itertools;
+
 use std::path::PathBuf;
+use std::cmp::Ordering;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PullRequest {
@@ -168,6 +172,15 @@ fn main() {
         let issues = get_issues(&client, &opt.owner, &component).expect("failed to get issues");
         // Filter out pull requests
         let issues = issues.into_iter().filter(|i| !i.is_pull_request());
+        // Sort by priorities
+        let issues = issues
+            .sorted_by(|a, b| match (a.get_priority(), b.get_priority()) {
+                (Some(_a), None) => Ordering::Less,
+                (None, Some(_b)) => Ordering::Greater,
+                (Some(pa), Some(pb)) => pa.cmp(&pb),
+                _ => Ordering::Equal,
+            })
+            .into_iter();
 
         for issue in issues {
             println!("{:?} {}", issue, issue.get_component());
