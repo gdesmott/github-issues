@@ -36,6 +36,11 @@ struct Milestone {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+struct Label {
+    name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 struct Issue {
     title: String,
     html_url: String,
@@ -44,6 +49,7 @@ struct Issue {
     pull_request: Option<PullRequest>,
     assignee: Option<Assignee>,
     milestone: Option<Milestone>,
+    labels: Option<Vec<Label>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -52,6 +58,7 @@ struct IssueCSV<'a> {
     title: String,
     assignee: Option<&'a str>,
     milestone: Option<&'a str>,
+    priority: Option<u32>,
 }
 
 impl Issue {
@@ -91,7 +98,27 @@ impl Issue {
                     None => None,
                 }
             },
+            priority: self.get_priority(),
         }
+    }
+
+    fn get_priority(&self) -> Option<u32> {
+        if self.labels.is_none() {
+            return None;
+        }
+
+        for label in self.labels.as_ref().unwrap() {
+            match label.name.as_str() {
+                "P0" => return Some(0),
+                "P1" => return Some(1),
+                "P2" => return Some(2),
+                "P3" => return Some(3),
+                "P4" => return Some(4),
+                "P5" => return Some(5),
+                _ => continue,
+            }
+        }
+        None
     }
 }
 
