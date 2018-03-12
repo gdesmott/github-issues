@@ -166,25 +166,28 @@ fn main() {
 
     let client = Github::new(opt.token).unwrap();
     let mut wtr = csv::Writer::from_path(&opt.output).expect("Failed to create output file");
+    let mut issues: Vec<Issue> = Vec::new();
 
     for component in opt.components {
-        let issues = get_issues(&client, &opt.owner, &component).expect("failed to get issues");
-        // Filter out pull requests
-        let issues = issues.into_iter().filter(|i| !i.is_pull_request());
-        // Sort by priorities
-        let issues = issues
-            .sorted_by(|a, b| match (a.get_priority(), b.get_priority()) {
-                (Some(_a), None) => Ordering::Less,
-                (None, Some(_b)) => Ordering::Greater,
-                (Some(pa), Some(pb)) => pa.cmp(&pb),
-                _ => Ordering::Equal,
-            })
-            .into_iter();
+        issues.append(&mut get_issues(&client, &opt.owner, &component)
+            .expect("failed to get issues"));
+    }
 
-        for issue in issues {
-            println!("{:?} {}", issue, issue.get_component());
-            wtr.serialize(issue.csv()).expect("Failed to add record");
-        }
+    // Filter out pull requests
+    let issues = issues.into_iter().filter(|i| !i.is_pull_request());
+    // Sort by priorities
+    let issues = issues
+        .sorted_by(|a, b| match (a.get_priority(), b.get_priority()) {
+            (Some(_a), None) => Ordering::Less,
+            (None, Some(_b)) => Ordering::Greater,
+            (Some(pa), Some(pb)) => pa.cmp(&pb),
+            _ => Ordering::Equal,
+        })
+        .into_iter();
+
+    for issue in issues {
+        println!("{:?} {}", issue, issue.get_component());
+        wtr.serialize(issue.csv()).expect("Failed to add record");
     }
 
     wtr.flush().expect("Failed to flush output");
