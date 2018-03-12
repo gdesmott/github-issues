@@ -58,11 +58,13 @@ struct Issue {
 
 #[derive(Debug, Serialize)]
 struct IssueCSV<'a> {
+    component: String,
     id: String,
-    title: String,
+    title: &'a str,
     assignee: Option<&'a str>,
     milestone: Option<&'a str>,
     priority: Option<u32>,
+    url: &'a str,
 }
 
 impl Issue {
@@ -83,13 +85,9 @@ impl Issue {
 
     fn csv(&self) -> IssueCSV {
         IssueCSV {
-            id: format!(
-                "=HYPERLINK(\"{}\", \"{} / #{}\")",
-                self.html_url,
-                self.get_component(),
-                self.number
-            ),
-            title: format!("=HYPERLINK(\"{}\", \"{}\")", self.html_url, self.title),
+            component: self.get_component(),
+            id: format!("#{}", self.number),
+            title: &self.title,
             assignee: {
                 match self.assignee {
                     Some(ref a) => Some(&a.login),
@@ -103,6 +101,7 @@ impl Issue {
                 }
             },
             priority: self.get_priority(),
+            url: &self.html_url,
         }
     }
 
