@@ -45,6 +45,18 @@ struct Label {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+enum IssueStateJson {
+    #[serde(rename = "open")] Open,
+    #[serde(rename = "closed")] Closed,
+}
+
+#[derive(Debug)]
+enum IssueState {
+    Open,
+    Closed,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 struct Issue {
     title: String,
     html_url: String,
@@ -54,6 +66,7 @@ struct Issue {
     assignee: Option<Assignee>,
     milestone: Option<Milestone>,
     labels: Option<Vec<Label>>,
+    state: IssueStateJson,
 }
 
 #[derive(Debug, Serialize)]
@@ -61,6 +74,7 @@ struct IssueCSV<'a> {
     component: String,
     id: String,
     title: &'a str,
+    state: String,
     assignee: Option<&'a str>,
     milestone: Option<&'a str>,
     priority: Option<u32>,
@@ -88,6 +102,7 @@ impl Issue {
             component: self.get_component(),
             id: format!("#{}", self.number),
             title: &self.title,
+            state: self.get_state_str(),
             assignee: {
                 match self.assignee {
                     Some(ref a) => Some(&a.login),
@@ -123,6 +138,20 @@ impl Issue {
         }
         None
     }
+
+    fn get_state(&self) -> IssueState {
+        match &self.state {
+            &IssueStateJson::Open => IssueState::Open,
+            &IssueStateJson::Closed => IssueState::Closed,
+        }
+    }
+
+    fn get_state_str(&self) -> String {
+        match self.get_state() {
+            IssueState::Open => "open".to_string(),
+            IssueState::Closed => "closed".to_string(),
+        }
+    }
 }
 
 type Issues = Vec<Issue>;
@@ -140,12 +169,10 @@ fn get_json(
 }
 
 fn get_issues(client: &Github, owner: &str, repo_name: &str) -> Option<Issues> {
+    let issues_endpoint = format!("repos/{}/{}/issues?state=all", owner, repo_name);
     let response = client
         .get()
-        .repos()
-        .owner(owner)
-        .repo(repo_name)
-        .issues()
+        .custom_endpoint(&issues_endpoint)
         .execute::<Issues>();
     get_json(response)
 }
@@ -175,13 +202,33 @@ fn main() {
 
     // Filter out pull requests
     let issues = issues.into_iter().filter(|i| !i.is_pull_request());
-    // Sort by priorities
+
     let issues = issues
-        .sorted_by(|a, b| match (a.get_priority(), b.get_priority()) {
-            (Some(_a), None) => Ordering::Less,
-            (None, Some(_b)) => Ordering::Greater,
-            (Some(pa), Some(pb)) => pa.cmp(&pb),
-            _ => Ordering::Equal,
+        .sorted_by(|a, b| {
+            match (a.get_state(), b.get_state()) {
+                (IssueState::Open, IssueState::Closed) => return Ordering::Less,
+                (IssueState::Closed, IssueState::Open) => return Ordering::Greater,
+                _ => {}
+            };
+
+            match (a.get_priority(), b.get_priority()) {
+                (Some(_a), None) => return Ordering::Less,
+                (None, Some(_b)) => return Ordering::Greater,
+                (Some(pa), Some(pb)) => return pa.cmp(&pb),
+                _ => {}
+            };
+
+            let cmp = a.get_component().cmp(&b.get_component());
+            if cmp == Ordering::Less || cmp == Ordering::Greater {
+                return cmp;
+            }
+
+            let cmp = a.number.cmp(&b.number);
+            if cmp == Ordering::Less || cmp == Ordering::Greater {
+                return cmp;
+            }
+
+            Ordering::Equal
         })
         .into_iter();
 
