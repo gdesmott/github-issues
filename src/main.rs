@@ -44,7 +44,7 @@ struct Label {
     name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 enum IssueStateJson {
     #[serde(rename = "open")] Open,
     #[serde(rename = "closed")] Closed,
@@ -54,6 +54,7 @@ enum IssueStateJson {
 enum IssueState {
     Open,
     Closed,
+    Blocked,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -140,16 +141,25 @@ impl Issue {
     }
 
     fn get_state(&self) -> IssueState {
-        match &self.state {
-            &IssueStateJson::Open => IssueState::Open,
-            &IssueStateJson::Closed => IssueState::Closed,
+        if self.state == IssueStateJson::Closed {
+            return IssueState::Closed;
         }
+
+        if let Some(a) = self.assignee.as_ref() {
+            // FIXME: don't hardcode account names
+            if a.login != "gdesmott" && a.login != "ndufresne" {
+                return IssueState::Blocked;
+            }
+        }
+
+        IssueState::Open
     }
 
     fn get_state_str(&self) -> String {
         match self.get_state() {
             IssueState::Open => "open".to_string(),
             IssueState::Closed => "closed".to_string(),
+            IssueState::Blocked => "blocked".to_string(),
         }
     }
 }
@@ -208,6 +218,8 @@ fn main() {
             match (a.get_state(), b.get_state()) {
                 (IssueState::Open, IssueState::Closed) => return Ordering::Less,
                 (IssueState::Closed, IssueState::Open) => return Ordering::Greater,
+                (IssueState::Blocked, _) => return Ordering::Less,
+                (_, IssueState::Blocked) => return Ordering::Greater,
                 _ => {}
             };
 
