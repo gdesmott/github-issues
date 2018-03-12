@@ -68,6 +68,7 @@ struct Issue {
     milestone: Option<Milestone>,
     labels: Option<Vec<Label>>,
     state: IssueStateJson,
+    closed_at: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -79,6 +80,7 @@ struct IssueCSV<'a> {
     assignee: Option<&'a str>,
     milestone: Option<&'a str>,
     priority: Option<u32>,
+    closed_at: Option<&'a str>,
     url: &'a str,
 }
 
@@ -117,6 +119,7 @@ impl Issue {
                 }
             },
             priority: self.get_priority(),
+            closed_at: self.get_closed_at(),
             url: &self.html_url,
         }
     }
@@ -160,6 +163,14 @@ impl Issue {
             IssueState::Open => "open".to_string(),
             IssueState::Closed => "closed".to_string(),
             IssueState::Blocked => "blocked".to_string(),
+        }
+    }
+
+    fn get_closed_at(&self) -> Option<&str> {
+        match self.closed_at {
+            None => None,
+            // Keep only 'yyyy-mm-dd'
+            Some(ref d) => Some(&d[..10]),
         }
     }
 }
@@ -218,6 +229,9 @@ fn main() {
             match (a.get_state(), b.get_state()) {
                 (IssueState::Open, IssueState::Closed) => return Ordering::Less,
                 (IssueState::Closed, IssueState::Open) => return Ordering::Greater,
+                (IssueState::Closed, IssueState::Closed) => {
+                    return b.get_closed_at().cmp(&a.get_closed_at())
+                }
                 (IssueState::Blocked, _) => return Ordering::Less,
                 (_, IssueState::Blocked) => return Ordering::Greater,
                 _ => {}
