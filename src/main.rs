@@ -53,6 +53,7 @@ enum IssueStateJson {
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
 enum IssueState {
     Blocked,
+    UnderReview,
     Open,
     Closed,
 }
@@ -155,6 +156,12 @@ impl Issue {
             }
         }
 
+        if let Some(labels) = self.labels.as_ref() {
+            if labels.iter().any(|l| l.name == "under review") {
+                return IssueState::UnderReview;
+            }
+        }
+
         IssueState::Open
     }
 
@@ -163,6 +170,7 @@ impl Issue {
             IssueState::Open => "open".to_string(),
             IssueState::Closed => "closed".to_string(),
             IssueState::Blocked => "blocked".to_string(),
+            IssueState::UnderReview => "under review".to_string(),
         }
     }
 
