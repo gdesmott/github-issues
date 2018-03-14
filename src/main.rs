@@ -50,11 +50,11 @@ enum IssueStateJson {
     #[serde(rename = "closed")] Closed,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
 enum IssueState {
+    Blocked,
     Open,
     Closed,
-    Blocked,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -226,16 +226,16 @@ fn main() {
 
     let issues = issues
         .sorted_by(|a, b| {
-            match (a.get_state(), b.get_state()) {
-                (IssueState::Open, IssueState::Closed) => return Ordering::Less,
-                (IssueState::Closed, IssueState::Open) => return Ordering::Greater,
-                (IssueState::Closed, IssueState::Closed) => {
-                    return b.get_closed_at().cmp(&a.get_closed_at())
-                }
-                (IssueState::Blocked, _) => return Ordering::Less,
-                (_, IssueState::Blocked) => return Ordering::Greater,
-                _ => {}
-            };
+            let state_a = a.get_state();
+            let state_b = b.get_state();
+
+            if state_a != state_b {
+                return state_a.cmp(&state_b);
+            }
+
+            if state_a == IssueState::Closed {
+                return b.get_closed_at().cmp(&a.get_closed_at());
+            }
 
             match (a.get_priority(), b.get_priority()) {
                 (Some(_a), None) => return Ordering::Less,
