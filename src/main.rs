@@ -217,56 +217,59 @@ struct Opt {
     #[structopt(help = "github components to look for issues")] components: Vec<String>,
 }
 
-fn main() {
-    let opt = Opt::from_args();
-
-    let client = Github::new(opt.token).unwrap();
-    let mut wtr = csv::Writer::from_path(&opt.output).expect("Failed to create output file");
+fn get_all_issues(client: &Github, owner: &str, components: &Vec<String>) -> Vec<Issue> {
     let mut issues: Vec<Issue> = Vec::new();
 
-    for component in opt.components {
-        issues.append(&mut get_issues(&client, &opt.owner, &component)
-            .expect("failed to get issues"));
+    for component in components {
+        issues.append(&mut get_issues(&client, owner, &component).expect("failed to get issues"));
     }
 
     // Filter out pull requests
     let issues = issues.into_iter().filter(|i| !i.is_pull_request());
 
-    let issues = issues
-        .sorted_by(|a, b| {
-            let state_a = a.get_state();
-            let state_b = b.get_state();
+    let issues = issues.sorted_by(|a, b| {
+        let state_a = a.get_state();
+        let state_b = b.get_state();
 
-            if state_a != state_b {
-                return state_a.cmp(&state_b);
-            }
+        if state_a != state_b {
+            return state_a.cmp(&state_b);
+        }
 
-            if state_a == IssueState::Closed {
-                return b.get_closed_at().cmp(&a.get_closed_at());
-            }
+        if state_a == IssueState::Closed {
+            return b.get_closed_at().cmp(&a.get_closed_at());
+        }
 
-            match (a.get_priority(), b.get_priority()) {
-                (Some(_a), None) => return Ordering::Less,
-                (None, Some(_b)) => return Ordering::Greater,
-                (Some(pa), Some(pb)) => return pa.cmp(&pb),
-                _ => {}
-            };
+        match (a.get_priority(), b.get_priority()) {
+            (Some(_a), None) => return Ordering::Less,
+            (None, Some(_b)) => return Ordering::Greater,
+            (Some(pa), Some(pb)) => return pa.cmp(&pb),
+            _ => {}
+        };
 
-            let cmp = a.get_component().cmp(&b.get_component());
-            if cmp == Ordering::Less || cmp == Ordering::Greater {
-                return cmp;
-            }
+        let cmp = a.get_component().cmp(&b.get_component());
+        if cmp == Ordering::Less || cmp == Ordering::Greater {
+            return cmp;
+        }
 
-            let cmp = a.number.cmp(&b.number);
-            if cmp == Ordering::Less || cmp == Ordering::Greater {
-                return cmp;
-            }
+        let cmp = a.number.cmp(&b.number);
+        if cmp == Ordering::Less || cmp == Ordering::Greater {
+            return cmp;
+        }
 
-            Ordering::Equal
-        })
-        .into_iter();
+        Ordering::Equal
+    });
 
-    for issue in issues {
+    issues
+}
+
+fn main() {
+    let opt = Opt::from_args();
+
+    let client = Github::new(opt.token).unwrap();
+    let mut wtr = csv::Writer::from_path(&opt.output).expect("Failed to create output file");
+    let issues = get_all_issues(&client, &opt.owner, &opt.components);
+
+    for issue in issues.into_iter() {
         println!("{:?} {}", issue, issue.get_component());
         wtr.serialize(issue.csv()).expect("Failed to add record");
     }
