@@ -262,12 +262,8 @@ fn get_all_issues(client: &Github, owner: &str, components: &Vec<String>) -> Vec
     issues
 }
 
-fn main() {
-    let opt = Opt::from_args();
-
-    let client = Github::new(opt.token).unwrap();
-    let mut wtr = csv::Writer::from_path(&opt.output).expect("Failed to create output file");
-    let issues = get_all_issues(&client, &opt.owner, &opt.components);
+fn generate_csv(issues: Vec<Issue>, output: &PathBuf) {
+    let mut wtr = csv::Writer::from_path(&output).expect("Failed to create output file");
 
     for issue in issues.into_iter() {
         println!("{:?} {}", issue, issue.get_component());
@@ -275,4 +271,13 @@ fn main() {
     }
 
     wtr.flush().expect("Failed to flush output");
+}
+
+fn main() {
+    let opt = Opt::from_args();
+
+    let client = Github::new(opt.token).unwrap();
+    let issues = get_all_issues(&client, &opt.owner, &opt.components);
+
+    generate_csv(issues, &opt.output);
 }
