@@ -231,13 +231,12 @@ fn get_all_issues(client: &Github, owner: &str, components: &Vec<String>) -> Vec
         let state_a = a.get_state();
         let state_b = b.get_state();
 
-        if state_a != state_b {
-            return state_a.cmp(&state_b);
-        }
-
-        if state_a == IssueState::Closed {
-            return b.get_closed_at().cmp(&a.get_closed_at());
-        }
+        // Put closed tasks last
+        match (&state_a, &state_b) {
+            (&IssueState::Closed, _) => return Ordering::Greater,
+            (_, &IssueState::Closed) => return Ordering::Less,
+            _ => {}
+        };
 
         match (a.get_priority(), b.get_priority()) {
             (Some(_a), None) => return Ordering::Less,
@@ -245,6 +244,14 @@ fn get_all_issues(client: &Github, owner: &str, components: &Vec<String>) -> Vec
             (Some(pa), Some(pb)) => return pa.cmp(&pb),
             _ => {}
         };
+
+        if state_a != state_b {
+            return state_a.cmp(&state_b);
+        }
+
+        if state_a == IssueState::Closed {
+            return b.get_closed_at().cmp(&a.get_closed_at());
+        }
 
         let cmp = a.get_component().cmp(&b.get_component());
         if cmp == Ordering::Less || cmp == Ordering::Greater {
