@@ -69,6 +69,7 @@ struct Issue {
     milestone: Option<Milestone>,
     labels: Option<Vec<Label>>,
     state: IssueStateJson,
+    created_at: String,
     closed_at: Option<String>,
 }
 
@@ -81,8 +82,14 @@ struct IssueCSV<'a> {
     assignee: Option<&'a str>,
     milestone: Option<&'a str>,
     priority: Option<u32>,
+    created_at: &'a str,
     closed_at: Option<&'a str>,
     url: &'a str,
+}
+
+fn strip_date(d: &str) -> &str {
+    // Keep only 'yyyy-mm-dd'
+    &d[..10]
 }
 
 impl Issue {
@@ -120,6 +127,7 @@ impl Issue {
                 }
             },
             priority: self.get_priority(),
+            created_at: self.get_created_at(),
             closed_at: self.get_closed_at(),
             url: &self.html_url,
         }
@@ -174,11 +182,14 @@ impl Issue {
         }
     }
 
+    fn get_created_at(&self) -> &str {
+        strip_date(&self.created_at)
+    }
+
     fn get_closed_at(&self) -> Option<&str> {
         match self.closed_at {
             None => None,
-            // Keep only 'yyyy-mm-dd'
-            Some(ref d) => Some(&d[..10]),
+            Some(ref d) => Some(strip_date(&d)),
         }
     }
 }
