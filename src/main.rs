@@ -209,7 +209,7 @@ fn get_json(
 }
 
 fn get_issues(client: &Github, owner: &str, repo_name: &str) -> Option<Issues> {
-    let issues_endpoint = format!("repos/{}/{}/issues?state=all", owner, repo_name);
+    let issues_endpoint = format!("repos/{}/{}/issues?state=all&per_page=500", owner, repo_name);
     let response = client
         .get()
         .custom_endpoint(&issues_endpoint)
