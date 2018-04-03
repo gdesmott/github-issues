@@ -46,8 +46,10 @@ struct Label {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 enum IssueStateJson {
-    #[serde(rename = "open")] Open,
-    #[serde(rename = "closed")] Closed,
+    #[serde(rename = "open")]
+    Open,
+    #[serde(rename = "closed")]
+    Closed,
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -204,7 +206,10 @@ fn get_json(
 }
 
 fn get_issues(client: &Github, owner: &str, repo_name: &str) -> Option<Issues> {
-    let issues_endpoint = format!("repos/{}/{}/issues?state=all&per_page=500", owner, repo_name);
+    let issues_endpoint = format!(
+        "repos/{}/{}/issues?state=all&per_page=500",
+        owner, repo_name
+    );
     let response = client
         .get()
         .custom_endpoint(&issues_endpoint)
@@ -215,12 +220,15 @@ fn get_issues(client: &Github, owner: &str, repo_name: &str) -> Option<Issues> {
 #[derive(StructOpt)]
 #[structopt(name = "github-issues", about = "Aggregate issues from various github repositories")]
 struct Opt {
-    #[structopt(help = "github auth token")] token: String,
-    #[structopt(help = "owner of github components")] owner: String,
+    #[structopt(help = "github auth token")]
+    token: String,
+    #[structopt(help = "owner of github components")]
+    owner: String,
     #[structopt(help = "output file", short = "o", long = "output", default_value = "issues.csv",
                 parse(from_os_str))]
     output: PathBuf,
-    #[structopt(help = "github components to look for issues")] components: Vec<String>,
+    #[structopt(help = "github components to look for issues")]
+    components: Vec<String>,
 }
 
 fn get_all_issues(client: &Github, owner: &str, components: &Vec<String>) -> Vec<Issue> {
