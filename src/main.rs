@@ -157,16 +157,11 @@ impl Issue {
             return IssueState::Closed;
         }
 
-        if let Some(a) = self.assignee.as_ref() {
-            // FIXME: don't hardcode account names
-            if a.login != "gdesmott" && a.login != "ndufresne" {
-                return IssueState::Blocked;
-            }
-        }
-
         if let Some(labels) = self.labels.as_ref() {
             if labels.iter().any(|l| l.name == "under review") {
                 return IssueState::UnderReview;
+            } else if labels.iter().any(|l| l.name == "blocked") {
+                return IssueState::Blocked;
             }
         }
 
