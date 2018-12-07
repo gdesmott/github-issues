@@ -18,8 +18,8 @@ extern crate csv;
 extern crate itertools;
 use itertools::Itertools;
 
-use std::path::PathBuf;
 use std::cmp::Ordering;
+use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PullRequest {
@@ -101,7 +101,8 @@ impl Issue {
 
     fn get_component(&self) -> String {
         let url = Url::parse(&self.repository_url).expect("Failed to parse repo URL");
-        let path_segments = url.path_segments()
+        let path_segments = url
+            .path_segments()
             .expect("Failed to extract path segments");
 
         path_segments
@@ -218,14 +219,22 @@ fn get_issues(client: &Github, owner: &str, repo_name: &str) -> Option<Issues> {
 }
 
 #[derive(StructOpt)]
-#[structopt(name = "github-issues", about = "Aggregate issues from various github repositories")]
+#[structopt(
+    name = "github-issues",
+    about = "Aggregate issues from various github repositories"
+)]
 struct Opt {
     #[structopt(help = "github auth token")]
     token: String,
     #[structopt(help = "owner of github components")]
     owner: String,
-    #[structopt(help = "output file", short = "o", long = "output", default_value = "issues.csv",
-                parse(from_os_str))]
+    #[structopt(
+        help = "output file",
+        short = "o",
+        long = "output",
+        default_value = "issues.csv",
+        parse(from_os_str)
+    )]
     output: PathBuf,
     #[structopt(help = "github components to look for issues")]
     components: Vec<String>,
