@@ -9,7 +9,6 @@ extern crate serde_json;
 extern crate url;
 use url::Url;
 
-#[macro_use]
 extern crate structopt;
 use structopt::StructOpt;
 
