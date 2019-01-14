@@ -1,6 +1,6 @@
 extern crate github_rs;
 use github_rs::client::{Executor, Github};
-use github_rs::{Headers, StatusCode};
+use github_rs::{HeaderMap, StatusCode};
 
 #[macro_use]
 extern crate serde_derive;
@@ -194,7 +194,7 @@ impl Issue {
 type Issues = Vec<Issue>;
 
 fn get_json(
-    response: Result<(Headers, StatusCode, Option<Issues>), github_rs::errors::Error>,
+    response: Result<(HeaderMap, StatusCode, Option<Issues>), github_rs::errors::Error>,
 ) -> Option<Issues> {
     match response {
         Ok((_headers, _status, json)) => json,
