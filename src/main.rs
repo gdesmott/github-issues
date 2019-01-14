@@ -136,8 +136,8 @@ impl Issue {
     }
 
     fn get_priority(&self) -> Option<u32> {
-        if self.labels.is_none() {
-            return None;
+        if self.labels.is_none() {                                                               
+            return None;                                                                         
         }
 
         for label in self.labels.as_ref().unwrap() {
@@ -239,7 +239,7 @@ struct Opt {
     components: Vec<String>,
 }
 
-fn get_all_issues(client: &Github, owner: &str, components: &Vec<String>) -> Vec<Issue> {
+fn get_all_issues(client: &Github, owner: &str, components: &[String]) -> Vec<Issue> {
     let mut issues: Vec<Issue> = Vec::new();
 
     for component in components {
@@ -249,7 +249,7 @@ fn get_all_issues(client: &Github, owner: &str, components: &Vec<String>) -> Vec
     // Filter out pull requests
     let issues = issues.into_iter().filter(|i| !i.is_pull_request());
 
-    let issues = issues.sorted_by(|a, b| {
+    issues.sorted_by(|a, b| {
         let state_a = a.get_state();
         let state_b = b.get_state();
 
@@ -286,9 +286,7 @@ fn get_all_issues(client: &Github, owner: &str, components: &Vec<String>) -> Vec
         }
 
         Ordering::Equal
-    });
-
-    issues
+    })
 }
 
 fn generate_csv(issues: Vec<Issue>, output: &PathBuf) {
