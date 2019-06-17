@@ -72,6 +72,7 @@ struct Issue {
     state: IssueStateJson,
     created_at: String,
     closed_at: Option<String>,
+    updated_at: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -86,6 +87,7 @@ struct IssueCSV<'a> {
     created_at: &'a str,
     closed_at: Option<&'a str>,
     url: &'a str,
+    updated_at: &'a str,
 }
 
 fn strip_date(d: &str) -> &str {
@@ -132,6 +134,7 @@ impl Issue {
             created_at: self.get_created_at(),
             closed_at: self.get_closed_at(),
             url: &self.html_url,
+            updated_at: self.get_updated_at(),
         }
     }
 
@@ -181,6 +184,10 @@ impl Issue {
 
     fn get_created_at(&self) -> &str {
         strip_date(&self.created_at)
+    }
+
+    fn get_updated_at(&self) -> &str {
+        strip_date(&self.updated_at)
     }
 
     fn get_closed_at(&self) -> Option<&str> {
