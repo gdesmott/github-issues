@@ -88,6 +88,12 @@ struct IssueCSV<'a> {
     closed_at: Option<&'a str>,
     url: &'a str,
     updated_at: &'a str,
+    last_comment: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Comment {
+    body: String,
 }
 
 fn strip_date(d: &str) -> &str {
@@ -112,7 +118,17 @@ impl Issue {
             .to_string()
     }
 
-    fn csv(&self) -> IssueCSV {
+    fn get_owner(&self) -> String {
+        let url = Url::parse(&self.repository_url).expect("Failed to parse repo URL");
+        let path_segments: Vec<&str> = url
+            .path_segments()
+            .expect("Failed to extract path segments")
+            .collect();
+
+        path_segments[path_segments.len() - 2].to_string()
+    }
+
+    fn csv(&self, client: &Github) -> IssueCSV {
         IssueCSV {
             component: self.get_component(),
             id: format!("#{}", self.number),
@@ -135,6 +151,7 @@ impl Issue {
             closed_at: self.get_closed_at(),
             url: &self.html_url,
             updated_at: self.get_updated_at(),
+            last_comment: self.get_last_comment(client),
         }
     }
 
@@ -196,13 +213,27 @@ impl Issue {
             Some(ref d) => Some(strip_date(&d)),
         }
     }
+
+    fn get_last_comment(&self, client: &Github) -> String {
+        let comments = get_comments(
+            client,
+            &self.get_owner(),
+            &self.get_component(),
+            self.number,
+        );
+
+        match comments.unwrap().pop() {
+            Some(last) => last.body.to_string(),
+            None => "".to_string(),
+        }
+    }
 }
 
 type Issues = Vec<Issue>;
 
-fn get_json(
-    response: Result<(HeaderMap, StatusCode, Option<Issues>), github_rs::errors::Error>,
-) -> Option<Issues> {
+fn get_json<T>(
+    response: Result<(HeaderMap, StatusCode, Option<T>), github_rs::errors::Error>,
+) -> Option<T> {
     match response {
         Ok((_headers, _status, json)) => json,
         Err(e) => {
@@ -221,6 +252,17 @@ fn get_issues(client: &Github, owner: &str, repo_name: &str) -> Option<Issues> {
         .get()
         .custom_endpoint(&issues_endpoint)
         .execute::<Issues>();
+    get_json(response)
+}
+
+type Comments = Vec<Comment>;
+
+fn get_comments(client: &Github, owner: &str, repo_name: &str, bug_id: u32) -> Option<Comments> {
+    let comments_endpoint = format!("repos/{}/{}/issues/{}/comments", owner, repo_name, bug_id,);
+    let response = client
+        .get()
+        .custom_endpoint(&comments_endpoint)
+        .execute::<Comments>();
     get_json(response)
 }
 
@@ -296,12 +338,13 @@ fn get_all_issues(client: &Github, owner: &str, components: &[String]) -> Vec<Is
     })
 }
 
-fn generate_csv(issues: Vec<Issue>, output: &PathBuf) {
+fn generate_csv(client: &Github, issues: Vec<Issue>, output: &PathBuf) {
     let mut wtr = csv::Writer::from_path(&output).expect("Failed to create output file");
 
     for issue in issues.into_iter() {
         println!("{:?} {}", issue, issue.get_component());
-        wtr.serialize(issue.csv()).expect("Failed to add record");
+        wtr.serialize(issue.csv(client))
+            .expect("Failed to add record");
     }
 
     wtr.flush().expect("Failed to flush output");
@@ -313,5 +356,5 @@ fn main() {
     let client = Github::new(opt.token).unwrap();
     let issues = get_all_issues(&client, &opt.owner, &opt.components);
 
-    generate_csv(issues, &opt.output);
+    generate_csv(&client, issues, &opt.output);
 }
