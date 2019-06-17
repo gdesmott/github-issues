@@ -136,8 +136,8 @@ impl Issue {
     }
 
     fn get_priority(&self) -> Option<u32> {
-        if self.labels.is_none() {                                                               
-            return None;                                                                         
+        if self.labels.is_none() {
+            return None;
         }
 
         for label in self.labels.as_ref().unwrap() {
